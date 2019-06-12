@@ -1037,7 +1037,7 @@ func (s *SqlGroupStore) GetGroups(page, perPage int, opts model.GroupSearchOpts)
 	return groups, nil
 }
 
-func (s *SqlGroupStore) ifGroupsThenUsersRemovedQuery(teamID string, groupIDs []string, isCount bool) squirrel.SelectBuilder {
+func (s *SqlGroupStore) ifGroupsThenTeamUsersRemovedQuery(teamID string, groupIDs []string, isCount bool) squirrel.SelectBuilder {
 	var selectStr string
 
 	if isCount {
@@ -1083,7 +1083,7 @@ func (s *SqlGroupStore) ifGroupsThenUsersRemovedQuery(teamID string, groupIDs []
 
 // IfGroupsThenTeamUsersRemoved returns all team members that should be removed based on group constraints.
 func (s *SqlGroupStore) IfGroupsThenTeamUsersRemoved(teamID string, groupIDs []string, page, perPage int) ([]*model.User, *model.AppError) {
-	query := s.ifGroupsThenUsersRemovedQuery(teamID, groupIDs, false)
+	query := s.ifGroupsThenTeamUsersRemovedQuery(teamID, groupIDs, false)
 	query = query.OrderBy("Users.Id").Limit(uint64(perPage)).Offset(uint64(page * perPage))
 
 	queryString, args, err := query.ToSql()
@@ -1101,7 +1101,7 @@ func (s *SqlGroupStore) IfGroupsThenTeamUsersRemoved(teamID string, groupIDs []s
 
 // CountIfGroupsThenTeamUsersRemoved returns the count all team members that should be removed based on group constraints.
 func (s *SqlGroupStore) CountIfGroupsThenTeamUsersRemoved(teamID string, groupIDs []string) (int64, *model.AppError) {
-	queryString, args, err := s.ifGroupsThenUsersRemovedQuery(teamID, groupIDs, true).ToSql()
+	queryString, args, err := s.ifGroupsThenTeamUsersRemovedQuery(teamID, groupIDs, true).ToSql()
 	if err != nil {
 		return 0, model.NewAppError("SqlGroupStore.CountIfGroupsThenTeamUsersRemoved", "store.sql_group.app_error", nil, err.Error(), http.StatusInternalServerError)
 	}
