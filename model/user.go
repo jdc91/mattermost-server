@@ -680,6 +680,7 @@ func ComparePassword(hash string, password string) bool {
 }
 
 var validUsernameChars = regexp.MustCompile(`^[a-z0-9\.\-_]+$`)
+var validFirstUsernameChar = regexp.MustCompile(`^[a-z]`)
 
 var restrictedUsernames = []string{
 	"all",
@@ -690,6 +691,10 @@ var restrictedUsernames = []string{
 
 func IsValidUsername(s string) bool {
 	if len(s) < USER_NAME_MIN_LENGTH || len(s) > USER_NAME_MAX_LENGTH {
+		return false
+	}
+
+	if !validFirstUsernameChar.MatchString(s) {
 		return false
 	}
 

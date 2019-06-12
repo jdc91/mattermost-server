@@ -133,6 +133,10 @@ func TestUserIsValid(t *testing.T) {
 	err = user.IsValid()
 	require.True(t, HasExpectedUserIsValidError(err, "username", user.Id), "expected user is valid error: %s", err.Error())
 
+	user.Username = ".username"
+	err = user.IsValid()
+	require.True(t, HasExpectedUserIsValidError(err, "username", user.Id), "expected user is valid error: %s", err.Error())
+
 	user.Username = NewId()
 	err = user.IsValid()
 	require.True(t, HasExpectedUserIsValidError(err, "email", user.Id), "expected user is valid error: %s", err.Error())
