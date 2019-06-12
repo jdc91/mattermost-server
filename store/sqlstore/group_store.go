@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/Masterminds/squirrel"
 
@@ -1034,4 +1035,81 @@ func (s *SqlGroupStore) GetGroups(page, perPage int, opts model.GroupSearchOpts)
 	}
 
 	return groups, nil
+}
+
+func (s *SqlGroupStore) usersWhoWouldBeRemovedFromTeamQuery(teamID string, groupIDs []string, isCount bool) squirrel.SelectBuilder {
+	var selectStr string
+
+	if isCount {
+		selectStr = "count(Users.*)"
+	} else {
+		if s.DriverName() == model.DATABASE_DRIVER_MYSQL {
+			selectStr = ""
+		} else {
+			selectStr = "Users.*, array_agg(UserGroups.DisplayName) AS GroupNames"
+		}
+	}
+
+	groupIDsSQL := strings.Join(groupIDs, "', '")
+
+	query := s.getQueryBuilder().Select(selectStr).
+		From(`TeamMembers
+			JOIN Teams ON Teams.Id = TeamMembers.TeamId
+			JOIN Users ON Users.Id = TeamMembers.UserId
+			LEFT JOIN Bots ON Bots.UserId = TeamMembers.UserId
+			JOIN GroupMembers ON GroupMembers.UserId = Users.Id
+			JOIN UserGroups ON UserGroups.Id = GroupMembers.GroupId`).
+		Where(fmt.Sprintf(`TeamMembers.DeleteAt = 0
+				AND Teams.DeleteAt = 0
+				AND Users.DeleteAt = 0
+				AND Bots.UserId IS NULL
+				AND Teams.Id = ?
+				AND Users.Id NOT IN (
+					SELECT
+						GroupMembers.UserId
+					FROM
+						GroupMembers
+						JOIN UserGroups ON UserGroups.Id = GroupMembers.GroupId
+					WHERE
+						GroupMembers.DeleteAt = 0
+						AND GroupMembers.GroupId IN ('%s'))`, groupIDsSQL), teamID)
+
+	if !isCount {
+		query = query.GroupBy("Users.Id")
+	}
+
+	return query
+}
+
+// UsersWhoWouldBeRemovedFromTeam returns all team members that should be removed based on group constraints.
+func (s *SqlGroupStore) UsersWhoWouldBeRemovedFromTeam(teamID string, groupIDs []string, page, perPage int) ([]*model.User, *model.AppError) {
+	query := s.usersWhoWouldBeRemovedFromTeamQuery(teamID, groupIDs, false)
+	query = query.OrderBy("Users.Id").Limit(uint64(perPage)).Offset(uint64(page * perPage))
+
+	queryString, args, err := query.ToSql()
+	if err != nil {
+		return nil, model.NewAppError("SqlGroupStore.UsersWhoWouldBeRemovedFromTeam", "store.sql_group.app_error", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	var users []*model.User
+	if _, err = s.GetReplica().Select(&users, queryString, args...); err != nil {
+		return nil, model.NewAppError("SqlGroupStore.UsersWhoWouldBeRemovedFromTeam", "store.select_error", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	return users, nil
+}
+
+// CountUsersWhoWouldBeRemovedFromTeam returns the count all team members that should be removed based on group constraints.
+func (s *SqlGroupStore) CountUsersWhoWouldBeRemovedFromTeam(teamID string, groupIDs []string) (int64, *model.AppError) {
+	queryString, args, err := s.usersWhoWouldBeRemovedFromTeamQuery(teamID, groupIDs, true).ToSql()
+	if err != nil {
+		return 0, model.NewAppError("SqlGroupStore.CountUsersWhoWouldBeRemovedFromTeam", "store.sql_group.app_error", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	var count int64
+	if count, err = s.GetReplica().SelectInt(queryString, args...); err != nil {
+		return 0, model.NewAppError("SqlGroupStore.CountUsersWhoWouldBeRemovedFromTeam", "store.select_error", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	return count, nil
 }
