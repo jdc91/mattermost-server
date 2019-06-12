@@ -20,7 +20,6 @@ import (
 )
 
 const (
-	VERSION_5_14_0           = "5.14.0"
 	VERSION_5_13_0           = "5.13.0"
 	VERSION_5_12_0           = "5.12.0"
 	VERSION_5_11_0           = "5.11.0"
@@ -159,7 +158,6 @@ func UpgradeDatabase(sqlStore SqlStore, currentModelVersionString string) error 
 	UpgradeDatabaseToVersion511(sqlStore)
 	UpgradeDatabaseToVersion512(sqlStore)
 	UpgradeDatabaseToVersion513(sqlStore)
-	UpgradeDatabaseToVersion514(sqlStore)
 
 	return nil
 }
@@ -699,13 +697,5 @@ func UpgradeDatabaseToVersion513(sqlStore SqlStore) {
 	// if shouldPerformUpgrade(sqlStore, VERSION_5_12_0, VERSION_5_13_0) {
 
 	// 	saveSchemaVersion(sqlStore, VERSION_5_13_0)
-	// }
-}
-
-func UpgradeDatabaseToVersion514(sqlStore SqlStore) {
-	// TODO: Uncomment following condition when version 5.14.0 is released
-	// if shouldPerformUpgrade(sqlStore, VERSION_5_13_0, VERSION_5_14_0) {
-	sqlStore.CreateIndexIfNotExists("idx_groupmembers_groupid", "GroupMembers", "GroupId")
-	// 	saveSchemaVersion(sqlStore, VERSION_5_14_0)
 	// }
 }
