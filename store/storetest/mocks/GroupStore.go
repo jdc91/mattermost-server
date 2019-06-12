@@ -109,8 +109,8 @@ func (_m *GroupStore) CountGroupsByTeam(teamId string, opts model.GroupSearchOpt
 	return r0, r1
 }
 
-// CountUsersWhoWouldBeRemovedFromTeam provides a mock function with given fields: teamID, groupIDs
-func (_m *GroupStore) CountUsersWhoWouldBeRemovedFromTeam(teamID string, groupIDs []string) (int64, *model.AppError) {
+// CountIfGroupsThenUsersRemoved provides a mock function with given fields: teamID, groupIDs
+func (_m *GroupStore) CountIfGroupsThenUsersRemoved(teamID string, groupIDs []string) (int64, *model.AppError) {
 	ret := _m.Called(teamID, groupIDs)
 
 	var r0 int64
@@ -467,6 +467,31 @@ func (_m *GroupStore) GetMemberUsersPage(groupID string, offset int, limit int) 
 	return r0
 }
 
+// IfGroupsThenUsersRemoved provides a mock function with given fields: teamID, groupIDs, page, perPage
+func (_m *GroupStore) IfGroupsThenUsersRemoved(teamID string, groupIDs []string, page int, perPage int) ([]*model.User, *model.AppError) {
+	ret := _m.Called(teamID, groupIDs, page, perPage)
+
+	var r0 []*model.User
+	if rf, ok := ret.Get(0).(func(string, []string, int, int) []*model.User); ok {
+		r0 = rf(teamID, groupIDs, page, perPage)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*model.User)
+		}
+	}
+
+	var r1 *model.AppError
+	if rf, ok := ret.Get(1).(func(string, []string, int, int) *model.AppError); ok {
+		r1 = rf(teamID, groupIDs, page, perPage)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*model.AppError)
+		}
+	}
+
+	return r0, r1
+}
+
 // TeamMembersToAdd provides a mock function with given fields: since
 func (_m *GroupStore) TeamMembersToAdd(since int64) ([]*model.UserTeamIDPair, *model.AppError) {
 	ret := _m.Called(since)
@@ -549,31 +574,6 @@ func (_m *GroupStore) UpdateGroupSyncable(groupSyncable *model.GroupSyncable) (*
 	var r1 *model.AppError
 	if rf, ok := ret.Get(1).(func(*model.GroupSyncable) *model.AppError); ok {
 		r1 = rf(groupSyncable)
-	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*model.AppError)
-		}
-	}
-
-	return r0, r1
-}
-
-// UsersWhoWouldBeRemovedFromTeam provides a mock function with given fields: teamID, groupIDs, page, perPage
-func (_m *GroupStore) UsersWhoWouldBeRemovedFromTeam(teamID string, groupIDs []string, page int, perPage int) ([]*model.User, *model.AppError) {
-	ret := _m.Called(teamID, groupIDs, page, perPage)
-
-	var r0 []*model.User
-	if rf, ok := ret.Get(0).(func(string, []string, int, int) []*model.User); ok {
-		r0 = rf(teamID, groupIDs, page, perPage)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*model.User)
-		}
-	}
-
-	var r1 *model.AppError
-	if rf, ok := ret.Get(1).(func(string, []string, int, int) *model.AppError); ok {
-		r1 = rf(teamID, groupIDs, page, perPage)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(*model.AppError)

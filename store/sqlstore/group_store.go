@@ -1037,16 +1037,16 @@ func (s *SqlGroupStore) GetGroups(page, perPage int, opts model.GroupSearchOpts)
 	return groups, nil
 }
 
-func (s *SqlGroupStore) usersWhoWouldBeRemovedFromTeamQuery(teamID string, groupIDs []string, isCount bool) squirrel.SelectBuilder {
+func (s *SqlGroupStore) ifGroupsThenUsersRemovedQuery(teamID string, groupIDs []string, isCount bool) squirrel.SelectBuilder {
 	var selectStr string
 
 	if isCount {
-		selectStr = "count(Users.*)"
+		selectStr = "count(DISTINCT Users.Id)"
 	} else {
 		if s.DriverName() == model.DATABASE_DRIVER_MYSQL {
-			selectStr = ""
+			selectStr = "Users.*, group_concat(UserGroups.DisplayName) AS GroupDisplayNames"
 		} else {
-			selectStr = "Users.*, array_agg(UserGroups.DisplayName) AS GroupNames"
+			selectStr = "Users.*, string_agg(UserGroups.DisplayName, ',') AS GroupDisplayNames"
 		}
 	}
 
@@ -1063,7 +1063,7 @@ func (s *SqlGroupStore) usersWhoWouldBeRemovedFromTeamQuery(teamID string, group
 				AND Teams.DeleteAt = 0
 				AND Users.DeleteAt = 0
 				AND Bots.UserId IS NULL
-				AND Teams.Id = ?
+				AND Teams.Id = '%s'
 				AND Users.Id NOT IN (
 					SELECT
 						GroupMembers.UserId
@@ -1072,7 +1072,7 @@ func (s *SqlGroupStore) usersWhoWouldBeRemovedFromTeamQuery(teamID string, group
 						JOIN UserGroups ON UserGroups.Id = GroupMembers.GroupId
 					WHERE
 						GroupMembers.DeleteAt = 0
-						AND GroupMembers.GroupId IN ('%s'))`, groupIDsSQL), teamID)
+						AND GroupMembers.GroupId IN ('%s'))`, teamID, groupIDsSQL))
 
 	if !isCount {
 		query = query.GroupBy("Users.Id")
@@ -1081,34 +1081,34 @@ func (s *SqlGroupStore) usersWhoWouldBeRemovedFromTeamQuery(teamID string, group
 	return query
 }
 
-// UsersWhoWouldBeRemovedFromTeam returns all team members that should be removed based on group constraints.
-func (s *SqlGroupStore) UsersWhoWouldBeRemovedFromTeam(teamID string, groupIDs []string, page, perPage int) ([]*model.User, *model.AppError) {
-	query := s.usersWhoWouldBeRemovedFromTeamQuery(teamID, groupIDs, false)
+// IfGroupsThenUsersRemoved returns all team members that should be removed based on group constraints.
+func (s *SqlGroupStore) IfGroupsThenUsersRemoved(teamID string, groupIDs []string, page, perPage int) ([]*model.User, *model.AppError) {
+	query := s.ifGroupsThenUsersRemovedQuery(teamID, groupIDs, false)
 	query = query.OrderBy("Users.Id").Limit(uint64(perPage)).Offset(uint64(page * perPage))
 
 	queryString, args, err := query.ToSql()
 	if err != nil {
-		return nil, model.NewAppError("SqlGroupStore.UsersWhoWouldBeRemovedFromTeam", "store.sql_group.app_error", nil, err.Error(), http.StatusInternalServerError)
+		return nil, model.NewAppError("SqlGroupStore.IfGroupsThenUsersRemoved", "store.sql_group.app_error", nil, err.Error(), http.StatusInternalServerError)
 	}
 
 	var users []*model.User
 	if _, err = s.GetReplica().Select(&users, queryString, args...); err != nil {
-		return nil, model.NewAppError("SqlGroupStore.UsersWhoWouldBeRemovedFromTeam", "store.select_error", nil, err.Error(), http.StatusInternalServerError)
+		return nil, model.NewAppError("SqlGroupStore.IfGroupsThenUsersRemoved", "store.select_error", nil, err.Error(), http.StatusInternalServerError)
 	}
 
 	return users, nil
 }
 
-// CountUsersWhoWouldBeRemovedFromTeam returns the count all team members that should be removed based on group constraints.
-func (s *SqlGroupStore) CountUsersWhoWouldBeRemovedFromTeam(teamID string, groupIDs []string) (int64, *model.AppError) {
-	queryString, args, err := s.usersWhoWouldBeRemovedFromTeamQuery(teamID, groupIDs, true).ToSql()
+// CountIfGroupsThenUsersRemoved returns the count all team members that should be removed based on group constraints.
+func (s *SqlGroupStore) CountIfGroupsThenUsersRemoved(teamID string, groupIDs []string) (int64, *model.AppError) {
+	queryString, args, err := s.ifGroupsThenUsersRemovedQuery(teamID, groupIDs, true).ToSql()
 	if err != nil {
-		return 0, model.NewAppError("SqlGroupStore.CountUsersWhoWouldBeRemovedFromTeam", "store.sql_group.app_error", nil, err.Error(), http.StatusInternalServerError)
+		return 0, model.NewAppError("SqlGroupStore.CountIfGroupsThenUsersRemoved", "store.sql_group.app_error", nil, err.Error(), http.StatusInternalServerError)
 	}
 
 	var count int64
 	if count, err = s.GetReplica().SelectInt(queryString, args...); err != nil {
-		return 0, model.NewAppError("SqlGroupStore.CountUsersWhoWouldBeRemovedFromTeam", "store.select_error", nil, err.Error(), http.StatusInternalServerError)
+		return 0, model.NewAppError("SqlGroupStore.CountIfGroupsThenUsersRemoved", "store.select_error", nil, err.Error(), http.StatusInternalServerError)
 	}
 
 	return count, nil

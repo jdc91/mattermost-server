@@ -45,7 +45,7 @@ func TestGroupStore(t *testing.T, ss store.Store) {
 
 	t.Run("GetGroups", func(t *testing.T) { testGetGroups(t, ss) })
 
-	t.Run("UsersWhoWouldBeRemovedFromTeam", func(t *testing.T) { testUsersWhoWouldBeRemovedFromTeam(t, ss) })
+	t.Run("IfGroupsThenUsersRemoved", func(t *testing.T) { testIfGroupsThenUsersRemoved(t, ss) })
 }
 
 func testGroupStoreCreate(t *testing.T, ss store.Store) {
@@ -2208,8 +2208,8 @@ func testGetGroups(t *testing.T, ss store.Store) {
 	}
 }
 
-func testUsersWhoWouldBeRemovedFromTeam(t *testing.T, ss store.Store) {
-	const numberOfGroups = 2
+func testIfGroupsThenUsersRemoved(t *testing.T, ss store.Store) {
+	const numberOfGroups = 3
 	const numberOfUsers = 4
 
 	groups := []*model.Group{}
@@ -2265,6 +2265,10 @@ func testUsersWhoWouldBeRemovedFromTeam(t *testing.T, ss store.Store) {
 	for i := 0; i < numberOfUsers; i++ {
 		groupIndex := int(math.Mod(float64(i), 2))
 		res := <-ss.Group().CreateOrRestoreMember(groups[groupIndex].Id, users[i].Id)
+		require.Nil(t, res.Err)
+
+		// Add everyone to group 2
+		res = <-ss.Group().CreateOrRestoreMember(groups[numberOfGroups-1].Id, users[i].Id)
 		require.Nil(t, res.Err)
 	}
 
@@ -2339,11 +2343,15 @@ func testUsersWhoWouldBeRemovedFromTeam(t *testing.T, ss store.Store) {
 				defer tc.teardown()
 			}
 
-			actual, err := ss.Group().UsersWhoWouldBeRemovedFromTeam(team.Id, tc.groupIDs, tc.page, tc.perPage)
+			actual, err := ss.Group().IfGroupsThenUsersRemoved(team.Id, tc.groupIDs, tc.page, tc.perPage)
 			require.Nil(t, err)
 			require.ElementsMatch(t, tc.expectedUserIDs, mapUserIDs(actual))
 
-			actualCount, err := ss.Group().CountUsersWhoWouldBeRemovedFromTeam(team.Id, tc.groupIDs)
+			for _, user := range actual {
+				require.NotNil(t, user.GroupDisplayNames)
+			}
+
+			actualCount, err := ss.Group().CountIfGroupsThenUsersRemoved(team.Id, tc.groupIDs)
 			require.Nil(t, err)
 			require.Equal(t, tc.expectedTotalCount, actualCount)
 		})
