@@ -109,8 +109,8 @@ func (_m *GroupStore) CountGroupsByTeam(teamId string, opts model.GroupSearchOpt
 	return r0, r1
 }
 
-// CountIfGroupsThenUsersRemoved provides a mock function with given fields: teamID, groupIDs
-func (_m *GroupStore) CountIfGroupsThenUsersRemoved(teamID string, groupIDs []string) (int64, *model.AppError) {
+// CountIfGroupsThenTeamUsersRemoved provides a mock function with given fields: teamID, groupIDs
+func (_m *GroupStore) CountIfGroupsThenTeamUsersRemoved(teamID string, groupIDs []string) (int64, *model.AppError) {
 	ret := _m.Called(teamID, groupIDs)
 
 	var r0 int64
@@ -467,8 +467,8 @@ func (_m *GroupStore) GetMemberUsersPage(groupID string, offset int, limit int) 
 	return r0
 }
 
-// IfGroupsThenUsersRemoved provides a mock function with given fields: teamID, groupIDs, page, perPage
-func (_m *GroupStore) IfGroupsThenUsersRemoved(teamID string, groupIDs []string, page int, perPage int) ([]*model.User, *model.AppError) {
+// IfGroupsThenTeamUsersRemoved provides a mock function with given fields: teamID, groupIDs, page, perPage
+func (_m *GroupStore) IfGroupsThenTeamUsersRemoved(teamID string, groupIDs []string, page int, perPage int) ([]*model.User, *model.AppError) {
 	ret := _m.Called(teamID, groupIDs, page, perPage)
 
 	var r0 []*model.User

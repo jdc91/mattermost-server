@@ -602,8 +602,8 @@ type GroupStore interface {
 
 	GetGroups(page, perPage int, opts model.GroupSearchOpts) ([]*model.Group, *model.AppError)
 
-	IfGroupsThenUsersRemoved(teamID string, groupIDs []string, page, perPage int) ([]*model.User, *model.AppError)
-	CountIfGroupsThenUsersRemoved(teamID string, groupIDs []string) (int64, *model.AppError)
+	IfGroupsThenTeamUsersRemoved(teamID string, groupIDs []string, page, perPage int) ([]*model.User, *model.AppError)
+	CountIfGroupsThenTeamUsersRemoved(teamID string, groupIDs []string) (int64, *model.AppError)
 }
 
 type LinkMetadataStore interface {

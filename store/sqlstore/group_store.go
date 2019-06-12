@@ -1081,34 +1081,34 @@ func (s *SqlGroupStore) ifGroupsThenUsersRemovedQuery(teamID string, groupIDs []
 	return query
 }
 
-// IfGroupsThenUsersRemoved returns all team members that should be removed based on group constraints.
-func (s *SqlGroupStore) IfGroupsThenUsersRemoved(teamID string, groupIDs []string, page, perPage int) ([]*model.User, *model.AppError) {
+// IfGroupsThenTeamUsersRemoved returns all team members that should be removed based on group constraints.
+func (s *SqlGroupStore) IfGroupsThenTeamUsersRemoved(teamID string, groupIDs []string, page, perPage int) ([]*model.User, *model.AppError) {
 	query := s.ifGroupsThenUsersRemovedQuery(teamID, groupIDs, false)
 	query = query.OrderBy("Users.Id").Limit(uint64(perPage)).Offset(uint64(page * perPage))
 
 	queryString, args, err := query.ToSql()
 	if err != nil {
-		return nil, model.NewAppError("SqlGroupStore.IfGroupsThenUsersRemoved", "store.sql_group.app_error", nil, err.Error(), http.StatusInternalServerError)
+		return nil, model.NewAppError("SqlGroupStore.IfGroupsThenTeamUsersRemoved", "store.sql_group.app_error", nil, err.Error(), http.StatusInternalServerError)
 	}
 
 	var users []*model.User
 	if _, err = s.GetReplica().Select(&users, queryString, args...); err != nil {
-		return nil, model.NewAppError("SqlGroupStore.IfGroupsThenUsersRemoved", "store.select_error", nil, err.Error(), http.StatusInternalServerError)
+		return nil, model.NewAppError("SqlGroupStore.IfGroupsThenTeamUsersRemoved", "store.select_error", nil, err.Error(), http.StatusInternalServerError)
 	}
 
 	return users, nil
 }
 
-// CountIfGroupsThenUsersRemoved returns the count all team members that should be removed based on group constraints.
-func (s *SqlGroupStore) CountIfGroupsThenUsersRemoved(teamID string, groupIDs []string) (int64, *model.AppError) {
+// CountIfGroupsThenTeamUsersRemoved returns the count all team members that should be removed based on group constraints.
+func (s *SqlGroupStore) CountIfGroupsThenTeamUsersRemoved(teamID string, groupIDs []string) (int64, *model.AppError) {
 	queryString, args, err := s.ifGroupsThenUsersRemovedQuery(teamID, groupIDs, true).ToSql()
 	if err != nil {
-		return 0, model.NewAppError("SqlGroupStore.CountIfGroupsThenUsersRemoved", "store.sql_group.app_error", nil, err.Error(), http.StatusInternalServerError)
+		return 0, model.NewAppError("SqlGroupStore.CountIfGroupsThenTeamUsersRemoved", "store.sql_group.app_error", nil, err.Error(), http.StatusInternalServerError)
 	}
 
 	var count int64
 	if count, err = s.GetReplica().SelectInt(queryString, args...); err != nil {
-		return 0, model.NewAppError("SqlGroupStore.CountIfGroupsThenUsersRemoved", "store.select_error", nil, err.Error(), http.StatusInternalServerError)
+		return 0, model.NewAppError("SqlGroupStore.CountIfGroupsThenTeamUsersRemoved", "store.select_error", nil, err.Error(), http.StatusInternalServerError)
 	}
 
 	return count, nil
