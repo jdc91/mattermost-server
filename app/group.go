@@ -4,6 +4,8 @@
 package app
 
 import (
+	"strings"
+
 	"github.com/mattermost/mattermost-server/model"
 )
 
@@ -162,14 +164,56 @@ func (a *App) GetGroups(page, perPage int, opts model.GroupSearchOpts) ([]*model
 }
 
 // IfGroupsThenTeamUsersRemoved returns the list of users who would be removed from the team if the groups were as given.
-func (a *App) IfGroupsThenTeamUsersRemoved(teamID string, groupIDs []string, page, perPage int) ([]*model.User, int64, *model.AppError) {
+func (a *App) IfGroupsThenTeamUsersRemoved(teamID string, groupIDs []string, page, perPage int) ([]*model.UserWithGroups, int64, *model.AppError) {
 	users, err := a.Srv.Store.Group().IfGroupsThenTeamUsersRemoved(teamID, groupIDs, page, perPage)
 	if err != nil {
 		return nil, 0, err
 	}
+
+	// parse all group ids of all users
+	allUsersGroupIDMap := map[string]bool{}
+	for _, user := range users {
+		for _, groupID := range strings.Split(user.GroupIDs, ",") {
+			allUsersGroupIDMap[groupID] = true
+		}
+	}
+
+	// create a slice of distinct group ids
+	var allUsersGroupIDSlice []string
+	for key := range allUsersGroupIDMap {
+		allUsersGroupIDSlice = append(allUsersGroupIDSlice, key)
+	}
+
+	// retrieve groups from DB
+	groups, err := a.GetGroupsByIDs(allUsersGroupIDSlice)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// map groups by id
+	groupMap := map[string]*model.Group{}
+	for _, group := range groups {
+		groupMap[group.Id] = group
+	}
+
+	// populate each instance's groups field
+	for _, user := range users {
+		user.Groups = []*model.Group{}
+		for _, groupID := range strings.Split(user.GroupIDs, ",") {
+			group, ok := groupMap[groupID]
+			if ok {
+				user.Groups = append(user.Groups, group)
+			}
+		}
+	}
+
 	totalCount, err := a.Srv.Store.Group().CountIfGroupsThenTeamUsersRemoved(teamID, groupIDs)
 	if err != nil {
 		return nil, 0, err
 	}
 	return users, totalCount, nil
+}
+
+func (a *App) GetGroupsByIDs(groupIDs []string) ([]*model.Group, *model.AppError) {
+	return a.Srv.Store.Group().GetByIDs(groupIDs)
 }

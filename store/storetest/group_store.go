@@ -2325,7 +2325,7 @@ func testIfGroupsThenTeamUsersRemoved(t *testing.T, ss store.Store) {
 		},
 	}
 
-	mapUserIDs := func(users []*model.User) []string {
+	mapUserIDs := func(users []*model.UserWithGroups) []string {
 		ids := []string{}
 		for _, user := range users {
 			ids = append(ids, user.Id)
@@ -2348,7 +2348,7 @@ func testIfGroupsThenTeamUsersRemoved(t *testing.T, ss store.Store) {
 			require.ElementsMatch(t, tc.expectedUserIDs, mapUserIDs(actual))
 
 			for _, user := range actual {
-				require.NotNil(t, user.GroupDisplayNames)
+				require.NotNil(t, user.GroupIDs)
 			}
 
 			actualCount, err := ss.Group().CountIfGroupsThenTeamUsersRemoved(team.Id, tc.groupIDs)

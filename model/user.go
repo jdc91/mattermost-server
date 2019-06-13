@@ -86,7 +86,7 @@ type User struct {
 	BotDescription         string    `db:"-" json:"bot_description,omitempty"`
 	TermsOfServiceId       string    `db:"-" json:"terms_of_service_id,omitempty"`
 	TermsOfServiceCreateAt int64     `db:"-" json:"terms_of_service_create_at,omitempty"`
-	GroupDisplayNames      *string   `db:"-" json:"-"`
+	// GroupDisplayNames      *string   `db:"-" json:"group_display_names"`
 }
 
 type UserUpdate struct {
@@ -768,4 +768,10 @@ func IsValidLocale(locale string) bool {
 	}
 
 	return true
+}
+
+type UserWithGroups struct {
+	User
+	GroupIDs string   `json:"-"`
+	Groups   []*Group `json:"groups"`
 }

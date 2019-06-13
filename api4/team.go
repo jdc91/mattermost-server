@@ -6,11 +6,13 @@ package api4
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/mattermost/mattermost-server/model"
 )
@@ -1091,4 +1093,38 @@ func ifGroupsThenUsersRemoved(c *Context, w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	if len(c.Params.GroupIDs) < 26 {
+		c.SetInvalidParam("group_ids")
+		return
+	}
+
+	if !c.App.SessionHasPermissionTo(c.App.Session, model.PERMISSION_MANAGE_SYSTEM) {
+		c.SetPermissionError(model.PERMISSION_MANAGE_SYSTEM)
+		return
+	}
+
+	users, totalCount, err := c.App.IfGroupsThenTeamUsersRemoved(
+		c.Params.TeamId,
+		strings.Split(c.Params.GroupIDs, ","),
+		c.Params.Page,
+		c.Params.PerPage,
+	)
+	if err != nil {
+		c.Err = err
+		return
+	}
+
+	b, marshalErr := json.Marshal(struct {
+		Users []*model.UserWithGroups `json:"users"`
+		Count int64                   `json:"total_count"`
+	}{
+		Users: users,
+		Count: totalCount,
+	})
+	if marshalErr != nil {
+		c.Err = model.NewAppError("Api4.ifGroupsThenUsersRemoved", "api.marshal_error", nil, marshalErr.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(b)
 }

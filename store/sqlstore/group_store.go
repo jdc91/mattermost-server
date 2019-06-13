@@ -133,6 +133,15 @@ func (s *SqlGroupStore) Get(groupId string) store.StoreChannel {
 	})
 }
 
+func (s *SqlGroupStore) GetByIDs(groupIDs []string) ([]*model.Group, *model.AppError) {
+	var groups []*model.Group
+	query := fmt.Sprintf("SELECT * from UserGroups WHERE Id IN ('%s')", strings.Join(groupIDs, "', '"))
+	if _, err := s.GetReplica().Select(&groups, query); err != nil {
+		return nil, model.NewAppError("SqlGroupStore.GetByIDs", "store.select_error", nil, err.Error(), http.StatusInternalServerError)
+	}
+	return groups, nil
+}
+
 func (s *SqlGroupStore) GetByRemoteID(remoteID string, groupSource model.GroupSource) store.StoreChannel {
 	return store.Do(func(result *store.StoreResult) {
 
@@ -1044,9 +1053,9 @@ func (s *SqlGroupStore) ifGroupsThenTeamUsersRemovedQuery(teamID string, groupID
 		selectStr = "count(DISTINCT Users.Id)"
 	} else {
 		if s.DriverName() == model.DATABASE_DRIVER_MYSQL {
-			selectStr = "Users.*, group_concat(UserGroups.DisplayName) AS GroupDisplayNames"
+			selectStr = "Users.*, group_concat(UserGroups.Id) AS GroupIDs"
 		} else {
-			selectStr = "Users.*, string_agg(UserGroups.DisplayName, ',') AS GroupDisplayNames"
+			selectStr = "Users.*, string_agg(UserGroups.Id, ',') AS GroupIDs"
 		}
 	}
 
@@ -1082,7 +1091,7 @@ func (s *SqlGroupStore) ifGroupsThenTeamUsersRemovedQuery(teamID string, groupID
 }
 
 // IfGroupsThenTeamUsersRemoved returns all team members that should be removed based on group constraints.
-func (s *SqlGroupStore) IfGroupsThenTeamUsersRemoved(teamID string, groupIDs []string, page, perPage int) ([]*model.User, *model.AppError) {
+func (s *SqlGroupStore) IfGroupsThenTeamUsersRemoved(teamID string, groupIDs []string, page, perPage int) ([]*model.UserWithGroups, *model.AppError) {
 	query := s.ifGroupsThenTeamUsersRemovedQuery(teamID, groupIDs, false)
 	query = query.OrderBy("Users.Id").Limit(uint64(perPage)).Offset(uint64(page * perPage))
 
@@ -1091,7 +1100,7 @@ func (s *SqlGroupStore) IfGroupsThenTeamUsersRemoved(teamID string, groupIDs []s
 		return nil, model.NewAppError("SqlGroupStore.IfGroupsThenTeamUsersRemoved", "store.sql_group.app_error", nil, err.Error(), http.StatusInternalServerError)
 	}
 
-	var users []*model.User
+	var users []*model.UserWithGroups
 	if _, err = s.GetReplica().Select(&users, queryString, args...); err != nil {
 		return nil, model.NewAppError("SqlGroupStore.IfGroupsThenTeamUsersRemoved", "store.select_error", nil, err.Error(), http.StatusInternalServerError)
 	}
